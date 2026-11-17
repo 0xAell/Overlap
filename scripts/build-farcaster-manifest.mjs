@@ -1,6 +1,17 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
+import { createRequire } from "node:module";
+
+// The host needs the ready signal before React hydration. Serve the same
+// locked SDK used by the client from our origin, including its license.
+const require = createRequire(import.meta.url);
+const sdkRoot = dirname(require.resolve("@farcaster/miniapp-sdk/package.json"));
+const { version: sdkVersion } = require("@farcaster/miniapp-sdk/package.json");
+const sdkDirectory = resolve("public", "vendor", `farcaster-sdk-${sdkVersion}`);
+await mkdir(sdkDirectory, { recursive: true });
+await copyFile(resolve(sdkRoot, "dist/index.min.js"), resolve(sdkDirectory, "index.min.js"));
+await copyFile(resolve(sdkRoot, "LICENSE"), resolve(sdkDirectory, "LICENSE"));
 
 const defaultAppUrl =
   process.env.NODE_ENV === "development"

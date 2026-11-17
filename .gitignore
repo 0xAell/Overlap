@@ -17,6 +17,7 @@
 /.next/
 /out/
 /.firebase/
+/public/vendor/farcaster-sdk-*/
 
 # production
 /build

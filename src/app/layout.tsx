@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { version as sdkVersion } from "@farcaster/miniapp-sdk/package.json";
 
 import { buildMiniAppLaunchUrl } from "@/lib/miniapp-launch";
 import { absoluteUrl } from "@/lib/utils";
@@ -97,9 +98,7 @@ export default function RootLayout({
     <html lang="en" className={`${bodyFont.variable} dark h-full antialiased`}>
       <head>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script
-          src="https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk/dist/index.min.js"
-        />
+        <script src={`/vendor/farcaster-sdk-${sdkVersion}/index.min.js`} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
