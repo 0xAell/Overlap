@@ -1,9 +1,6 @@
-import { createRequire } from "node:module";
-import { readFile } from "node:fs/promises";
+import { buildBrowserSdk } from "./browser-sdk.mjs";
 
-const require = createRequire(import.meta.url);
-const { version: sdkVersion } = require("@farcaster/miniapp-sdk/package.json");
-const sdkPath = `/vendor/farcaster-sdk-${sdkVersion}/index.min.js`;
+const { bytes: bundledSdk, path: sdkPath } = await buildBrowserSdk();
 const baseUrl = process.env.SMOKE_URL ?? "http://127.0.0.1:3000";
 
 async function assertJson(path, validate) {
@@ -51,11 +48,8 @@ await assertText("/", (text) => {
 });
 
 const sdkResponse = await fetch(new URL(sdkPath, baseUrl));
-const installedSdk = await readFile(
-  new URL("dist/index.min.js", import.meta.resolve("@farcaster/miniapp-sdk/package.json")),
-);
-if (!sdkResponse.ok || !installedSdk.equals(Buffer.from(await sdkResponse.arrayBuffer()))) {
-  throw new Error("Hosted Farcaster SDK did not match the installed package");
+if (!sdkResponse.ok || !bundledSdk.equals(Buffer.from(await sdkResponse.arrayBuffer()))) {
+  throw new Error("Hosted Farcaster SDK did not match the local browser build");
 }
 
 await assertText("/overlap-card.svg", (text) => {

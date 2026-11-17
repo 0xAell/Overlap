@@ -1,16 +1,24 @@
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
+import { buildBrowserSdk } from "./browser-sdk.mjs";
 import { dirname, resolve } from "node:path";
 import { createRequire } from "node:module";
 
 // The host needs the ready signal before React hydration. Serve the same
-// locked SDK used by the client from our origin, including its license.
+// locked SDK and dependencies as the hydrated client, including its license.
 const require = createRequire(import.meta.url);
 const sdkRoot = dirname(require.resolve("@farcaster/miniapp-sdk/package.json"));
-const { version: sdkVersion } = require("@farcaster/miniapp-sdk/package.json");
-const sdkDirectory = resolve("public", "vendor", `farcaster-sdk-${sdkVersion}`);
+const { bytes: sdkBytes, path: sdkBootPath } = await buildBrowserSdk();
+const sdkOutput = resolve("public", `.${sdkBootPath}`);
+const sdkDirectory = dirname(sdkOutput);
 await mkdir(sdkDirectory, { recursive: true });
-await copyFile(resolve(sdkRoot, "dist/index.min.js"), resolve(sdkDirectory, "index.min.js"));
+await writeFile(sdkOutput, sdkBytes);
+for (const file of await readdir(sdkDirectory)) {
+  const path = resolve(sdkDirectory, file);
+  if (path !== sdkOutput && /^index(?:\.[a-f0-9]{24})?\.min\.js$/.test(file)) {
+    await rm(path, { force: true });
+  }
+}
 await copyFile(resolve(sdkRoot, "LICENSE"), resolve(sdkDirectory, "LICENSE"));
 
 const defaultAppUrl =
@@ -96,7 +104,7 @@ await mkdir(dirname(outputPath), { recursive: true });
 await mkdir(dirname(generatedMetaPath), { recursive: true });
 await writeFile(
   generatedMetaPath,
-  `export const miniAppLaunchVersion = "${launchVersion}";\n`,
+  `export const miniAppLaunchVersion = "${launchVersion}";\nexport const sdkBootPath = "${sdkBootPath}";\n`,
   "utf8",
 );
 await writeFile(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
